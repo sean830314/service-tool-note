@@ -1,8 +1,6 @@
 import elasticapm
 import time
 client = elasticapm.Client(service_name="train_model")
-# a=CPUMetricSet(MetricsRegistry(client))
-# elasticapm.instrument()
 
 @elasticapm.capture_span("load data",span_type="db.mysql.query", labels={"type": "load_data"})
 def load_data(data):
@@ -62,7 +60,7 @@ if __name__ == "__main__":
     data = {
         "custom_field": "test_value"
     }
-    for i in range(100):
+    for i in range(10):
         client.begin_transaction(transaction_type="track-do-thing")
         time.sleep(4)
         load_data(data)
