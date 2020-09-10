@@ -1,0 +1,15 @@
+syntax = "proto3";
+service AiService {
+    rpc PredictComment (PredictCommentRequest) returns (PredictCommentReply) {}
+  }
+
+
+  message PredictCommentRequest {
+    string apm_trace_parent_id = 1;
+    string data = 2;
+  }
+
+
+  message PredictCommentReply {
+    string data = 1;
+  }
