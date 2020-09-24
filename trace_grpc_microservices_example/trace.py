@@ -2,30 +2,33 @@ from __future__ import print_function
 
 import grpc
 
-from trace_grpc_microservices_example.DataService import service_pb2_grpc as data_pb2_grpc
-from trace_grpc_microservices_example.DataService import service_pb2 as data_pb2
-from trace_grpc_microservices_example.AiService import service_pb2_grpc as ai_pb2_grpc
-from trace_grpc_microservices_example.AiService import service_pb2 as ai_pb2
+from trace_grpc_microservices_example.DataService import db_service_pb2_grpc as data_pb2_grpc
+from trace_grpc_microservices_example.DataService import db_service_pb2 as data_pb2
+from trace_grpc_microservices_example.AiService import ai_service_pb2_grpc as ai_pb2_grpc
+from trace_grpc_microservices_example.AiService import ai_service_pb2 as ai_pb2
 import elasticapm
 from elasticapm.traces import execution_context
-
+import google.protobuf.empty_pb2
 client = elasticapm.Client(service_name="movie_comment_predict")
 elasticapm.instrument()
 
 def get_data(trace_id):
     channel = grpc.insecure_channel('localhost:50051')
     stub = data_pb2_grpc.DataServiceStub(channel)
-    response = stub.GetCommentsData(data_pb2.GetCommentsDataRequest(apm_trace_parent_id=trace_id))
+    metadata = [('apm_trace_parent_id', trace_id)]
+    response = stub.GetCommentsData(google.protobuf.empty_pb2.Empty() ,metadata=metadata)
     print("DataService client received: " + response.data)
     return response.data
 
 def predict_data(trace_id, data):
     channel = grpc.insecure_channel('localhost:50052')
     stub = ai_pb2_grpc.AiServiceStub(channel)
-    response = stub.PredictComment(ai_pb2.PredictCommentRequest(apm_trace_parent_id=trace_id, data=data))
+    metadata = [('apm_trace_parent_id', trace_id)]
+    response = stub.PredictComment(ai_pb2.PredictCommentRequest(data=data) ,metadata=metadata)
     print("AiService client received: " + response.data)
     return response.data
 def run():
+    print("start")
     try:
         client.begin_transaction("main")
         transaction = execution_context.get_transaction()
@@ -35,7 +38,8 @@ def run():
         data = predict_data(trace_parent_str, data)
         client.end_transaction("main")
     except Exception as e:
+        print("Exception")
         client.capture_exception()
-
+    print("Done")
 if __name__ == '__main__':
     run()

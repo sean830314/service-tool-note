@@ -5,7 +5,6 @@ service AiService {
 
 
   message PredictCommentRequest {
-    string apm_trace_parent_id = 1;
     string data = 2;
   }
 

@@ -3,7 +3,7 @@ import time
 
 import grpc
 
-from trace_grpc_microservices_example.DataService import service_pb2_grpc, service_pb2
+from trace_grpc_microservices_example.DataService import db_service_pb2_grpc, db_service_pb2
 import elasticapm
 from elasticapm.contrib.flask import ElasticAPM
 import time
@@ -21,22 +21,23 @@ def process_comments():
     time.sleep(5)
     client.capture_message(message="DataServicer process comments ok")
 
-class DataServicer(service_pb2_grpc.DataServiceServicer):
+class DataServicer(db_service_pb2_grpc.DataServiceServicer):
     def GetCommentsData(self, request, context):
         try:
-            parent = elasticapm.trace_parent_from_string(request.apm_trace_parent_id)
+            #parent = elasticapm.trace_parent_from_string(request.apm_trace_parent_id)
+            parent = elasticapm.trace_parent_from_string(dict(context.invocation_metadata())['apm_trace_parent_id'])
             client.begin_transaction("get movice comments", trace_parent=parent)
             query_comments()
             process_comments()
             client.end_transaction("finish get movice comments")
-            return service_pb2.GetCommentsDataReply(data='the movie is bad')
+            return db_service_pb2.GetCommentsDataReply(data='the movie is bad')
         except Exception as e:
             client.capture_exception()
 
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    service_pb2_grpc.add_DataServiceServicer_to_server(DataServicer(), server)
+    db_service_pb2_grpc.add_DataServiceServicer_to_server(DataServicer(), server)
     server.add_insecure_port('[::]:50051')
     server.start()
     try:

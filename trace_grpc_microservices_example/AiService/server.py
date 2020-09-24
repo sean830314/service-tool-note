@@ -3,7 +3,7 @@ import time
 
 import grpc
 
-from trace_grpc_microservices_example.AiService import service_pb2_grpc, service_pb2
+from trace_grpc_microservices_example.AiService import ai_service_pb2_grpc, ai_service_pb2
 import elasticapm
 from elasticapm.contrib.flask import ElasticAPM
 import time
@@ -25,23 +25,24 @@ def predict():
     time.sleep(10)
     client.capture_message(message="AiServicer predict data ok")
 
-class AiServicer(service_pb2_grpc.AiServiceServicer):
+class AiServicer(ai_service_pb2_grpc.AiServiceServicer):
     def PredictComment(self, request, context):
         try:
-            parent = elasticapm.trace_parent_from_string(request.apm_trace_parent_id)
+            #parent = elasticapm.trace_parent_from_string(request.apm_trace_parent_id)
+            parent = elasticapm.trace_parent_from_string(dict(context.invocation_metadata())['apm_trace_parent_id'])
             client.begin_transaction("predict movice comments", trace_parent=parent)
             preprocess_data()
             read_model()
             predict()
             client.end_transaction("finish predict movice comments")
-            return service_pb2.PredictCommentReply(data='Predict: {}'.format(request.data))
+            return ai_service_pb2.PredictCommentReply(data='Predict: {}'.format(request.data))
         except Exception as e:
             client.capture_exception()
 
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    service_pb2_grpc.add_AiServiceServicer_to_server(AiServicer(), server)
+    ai_service_pb2_grpc.add_AiServiceServicer_to_server(AiServicer(), server)
     server.add_insecure_port('[::]:50052')
     server.start()
     try:
