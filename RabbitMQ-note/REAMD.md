@@ -22,11 +22,18 @@ RabbitMQ是一個開源的AMQP實現，伺服器端用 Erlang 語言編寫，支
     用來決定Producer丟過來的資料要送給哪個Queue，主要有四種方式
     
     1. direct: 直接丟給指定的 Queue
+
     ![Alt text](./png/prefetch-count.webp)
     [work queue code](./work_queue)
+    
     2. topic: 類似 regular expression，設定 binding 規則，丟給符合的 Queue
+
     3. headers: 透過傳送資料的 header 來特別指定所要的 Queue
+
     4. fanout: 一次丟給全部負責的 Queue
+
+    ![Alt text](./png/fanout.webp)
+    [work queue code](./Publish-Subscribe)
 * Binding.
 
     跟 Exchange 成對搭配，主要是告訴 Exchange 他負責哪些 Queue
