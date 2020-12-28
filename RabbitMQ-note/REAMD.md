@@ -23,17 +23,33 @@ RabbitMQ是一個開源的AMQP實現，伺服器端用 Erlang 語言編寫，支
     
     1. direct: 直接丟給指定的 Queue
 
-    ![Alt text](./png/prefetch-count.webp)
-    [work queue code](./work_queue)
+        ![Alt text](./png/prefetch-count.webp)
+        
+        [Work queue code](./work_queue)
     
     2. topic: 類似 regular expression，設定 binding 規則，丟給符合的 Queue
 
-    3. headers: 透過傳送資料的 header 來特別指定所要的 Queue
+        ![Alt text](./png/Topics.webp)
+
+        [Topics code](./Topics)
+
+        Submit logs related to kern topics
+
+        ![Alt text](./png/kern.png)
+        Submit logs related to critical topics
+        
+        ![Alt text](./png/critical.png)
+    3. routing: 透過傳送資料的 routing key 來特別指定所要的 Queue
+
+        ![Alt text](./png/routing.webp)
+
+        [Routing code](./Routing)
 
     4. fanout: 一次丟給全部負責的 Queue
 
-    ![Alt text](./png/fanout.webp)
-    [work queue code](./Publish-Subscribe)
+        ![Alt text](./png/fanout.webp)
+
+        [Publish-Subscribe code](./Publish-Subscribe)
 * Binding.
 
     跟 Exchange 成對搭配，主要是告訴 Exchange 他負責哪些 Queue
@@ -76,3 +92,85 @@ rabbitmqadmin get queue=document_analysis requeue=true count=10
     ```
     channel.basic_qos(prefetch_count=1)
     ```
+* Consumer Ack/Reject
+
+    首先，我們先看下這樣的業務場景，在訊息發出後， Consumer 接收到了生產者所發出的訊息，但在 Consumer 突然出錯崩潰，或者異常退出了，但是生產者訊息已經發出來了，那麼這個訊息可能就會丟失，為了解決這樣的問題， RabbitMQ 引入了 ack 機制。 消費者在訂閱佇列時，可以指定 autoAck 引數，當 autoAck 等於 false 時， RabbitMQ 會等待消費者顯式地回覆確認訊號後才從記憶體(或者磁碟)中移去訊息(實質上是先打上刪除標記，之後再刪除)。當 autoAck 等於 true 時， RabbitMQ 會⾃自動把傳送出去的訊息置為確認， 然後從記憶體(或者磁碟)中刪除，而不管消費者是否真正地消費到了這些訊息。 當採用ack訊息確認機制後，只要將 autoAck 設定為 false 。消費者就可以有足夠的時間來處理訊息，而不用擔心消費過程中突然異常退出導致訊息丟失的情況，因為 RabbitMQ 會一直持有訊息，直到消費者呼叫 basic.ack 為止。在這種情況下，對於 RabbitMQ 來說，佇列中的訊息就可以分為兩部分，一部分是等待發送給消費者的訊息，另外一部分就是等待接收消費者確認的訊息。那麼如果在這個時候，消費者突然發生中斷，在消費中的訊息會怎麼處理呢？ 如果 RabbitMQ 一直沒有接收到消費者的確認訊息，並且消費者的連線已經關閉，那麼 RabbitMQ 就會重新將讓訊息進入佇列中，等待下一個消費者消費。 RabbitMQ 不會為未確認的訊息設定過期時間，它判斷此訊息是否需要重新投遞給消費者的唯一依據是消費該訊息的消費者連線是否已經斷開。 參考如下程式碼，我們設定了 auto_ack=True ：
+    ```
+    import pika
+    from time import sleep
+
+    user_pwd = pika.PlainCredentials('admin', 'admin')
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host='localhost', credentials=user_pwd))
+    channel = connection.channel()
+
+    channel.queue_declare(queue='hello', durable=True)
+
+
+    def callback(ch, method, properties, body):
+        print(" [x] Received %r" % body)
+        sleep(1)
+
+    channel.basic_consume(
+        queue='hello', on_message_callback=callback, auto_ack=True)
+
+    print(' [*] Waiting for messages. To exit press CTRL+C')
+    channel.start_consuming()
+    ```
+    可以看到，如果我們設定 auto_ack=True 之後，雖然我們在消費的時候有休眠1s，而且這個時候訊息還沒有全部消費完，但是在後臺看到佇列中的訊息已經被消費完了，這個原因是當消費者連線上隊列了，因為沒有指定消費者一次獲取訊息的條數，所以佇列把佇列中的所有訊息一下子推送到消費者端，當消費者訂閱的該佇列，訊息就會從佇列推到客戶端，當訊息從佇列被推出的時的那一刻就表示已經對訊息進行自動確認了，訊息就會從佇列中刪除。 下面我們再看看設定 auto_ack=False 的情況：
+    ```
+    import pika
+    from time import sleep
+
+    user_pwd = pika.PlainCredentials('admin', 'admin')
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host='localhost', credentials=user_pwd))
+    channel = connection.channel()
+
+    channel.queue_declare(queue='hello', durable=True)
+
+    def callback(ch, method, properties, body):
+        print(" [x] Received %r" % body)
+        sleep(1)
+
+    channel.basic_consume(
+        queue='hello', on_message_callback=callback, auto_ack=False)
+
+    print(' [*] Waiting for messages. To exit press CTRL+C')
+    channel.start_consuming()
+    ```
+    執行結果如下：
+    ![Alt text](./png/result.png)
+    可以看到，佇列中的訊息都變成了 unacked 狀態，這是為什麼呢？ 我們上面有說過， rabbitmq 需要等到消費者顯示的呼叫 basic.ack ，要不然的話 rabbitmq 會一直持有這些訊息，如果我們在這個時候再啟動一個消費者的話，可以看到這些訊息還會再次被消費。為了解決這個問題，我們只要修改下 callback 方法如下：
+    ```
+    def callback(ch, method, properties, body):
+        print(" [x] Received %r" % body)
+        sleep(1)
+        # delivery_tag 是在 channel 中的一個訊息計數, 每次訊息提取行為都對應一個數字.
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+    ```
+    就可以，這時，我們重啟消費者，可以看到我們的訊息會被正常的消費，並且佇列中訊息的不會被瞬間清空，而是按照我們的消費速度一個一個的刪除。 消費者在接收到訊息之後，還可以拒絕訊息，我們只需要呼叫 basic_reject 就可以，如下:
+    ```
+    def callback(ch, method, properties, body):
+        print(" [x] Received %r" % body)
+        sleep(1)
+        # delivery_tag 是在 channel 中的一個訊息計數, 每次訊息提取行為都對應一個數字.
+        ch.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
+    ```
+    requeue 引數的意思是被拒絕的這個訊息是否需要重新進入佇列，預設是 True 。
+
+* priority job
+
+    [code](./DelayDeadLetterExchange)
+* solved Immediate Re-queueing
+
+    [Delay Dead Letter Exchange](https://medium.com/@lalayueh/%E5%A6%82%E4%BD%95%E5%84%AA%E9%9B%85%E5%9C%B0%E5%9C%A8rabbitmq%E5%AF%A6%E7%8F%BE%E5%A4%B1%E6%95%97%E9%87%8D%E8%A9%A6-c050efd72cdb)
+
+    [code](./DelayDeadLetterExchange)
+
+## Reference
+* [RabbitMQ tutorial](https://www.rabbitmq.com/tutorials/tutorial-one-python.html)
+* [如何優雅地在RabbitMQ實現失敗重試](https://medium.com/@lalayueh/%E5%A6%82%E4%BD%95%E5%84%AA%E9%9B%85%E5%9C%B0%E5%9C%A8rabbitmq%E5%AF%A6%E7%8F%BE%E5%A4%B1%E6%95%97%E9%87%8D%E8%A9%A6-c050efd72cdb)
+* [RabbitMQ學習筆記之(二) 消費端的確認與拒絕
+](http://ma-graph.org/sparql-endpoint/)
+* [RabbitMQ系列之三 RabbitMQ几种典型模式](https://blog.csdn.net/caiqing116/article/details/84032099?utm_medium=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-1.control&depth_1-utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-1.control)
