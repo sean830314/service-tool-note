@@ -7,14 +7,18 @@ services:
       - "9200:9200"
       - "9300:9300"
     environment:
-    - discovery.type=single-node  
+    - discovery.type=single-node
     - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
     networks:
       - docker_elk
   logstash:
     image: logstash:7.9.2
+    volumes:
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
     ports:
-      - "5000:5000"
+      - "5001:5001"
+      - "12201:12201/udp"
     networks:
       - docker_elk
     depends_on:
