@@ -1,5 +1,15 @@
 from elasticsearch import Elasticsearch
 
+"""
+# curl localhost:9200/my_index/my_type/s_X2S3cB1BlXf_Yvwfj1
+# res = es.search(index="my_index",doc_type="my_type")
+# res = es.index(index="my_index", doc_type="my_type", body={"key1": "Hello123."})
+# res = es.get(index="my_index",doc_type="my_type",  id ="s_X2S3cB1BlXf_Yvwfj1")
+# res = es.delete(index="my_index",doc_type="my_type", id ="s_X2S3cB1BlXf_Yvwfj1")
+# res = es.update(index="my_index", doc_type="my_type", id='s_X2S3cB1BlXf_Yvwfj1', body={"doc": {"key1": "Hello456."}})
+"""
+
+
 def load_datas():
     datas = list()
     with open('elasticsearch/student.csv', 'r',encoding="utf-8") as f:
@@ -15,6 +25,7 @@ def load_datas():
             )
     return datas
 
+
 def create_data(es, datas):
     for data in datas:
         es.index(index='school',   body=data)  
@@ -24,19 +35,23 @@ def search_all_docs():
     res = es.search(index="school",  body={"query": {"match_all": {}}})
     print(res)
 
+
 def search_by_text(key, value):
     print("***"*100)
     res = es.search(index="school",  body={"query": {"match": {key: value}}})
     print(res)
+
 
 def search_by_keyword(key, value):
     print("***"*100)
     res = es.search(index="school",  body={"query": {"match": {key: value}}})
     print(res)
     
+
 def delet_record(es, id):
     es.delete(index='school',  id=id)   
     
+
 def update_record(es, id):
     body = {
         "doc": {
@@ -45,6 +60,7 @@ def update_record(es, id):
     }
     es.update(index='school',  id=id, body=body)   
     
+
 def create_index(es):
     body = dict()
     body['settings'] = get_setting()
@@ -84,8 +100,10 @@ def get_mappings():
 
     return mappings
 
+
 def delete_index(es):
     es.indices.delete(index='school', ignore=[400, 404])
+
 
 if __name__ == "__main__":
     es = Elasticsearch(host="localhost", port=9200)
