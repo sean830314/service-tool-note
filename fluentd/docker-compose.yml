@@ -1,0 +1,17 @@
+version: "3"
+services:
+  serverfluent:
+    image: ekko771/fluentd-mogo:latest
+    volumes:
+      - ./server_fluentd.conf:/fluentd/etc/fluent.conf
+    ports: 
+      - 24224:24224
+  redis:
+    image: redis:alpine
+    ports:
+      - 6379:6379
+  mongo:
+    image: mongo
+    restart: always
+    ports: 
+      - 27017:27017
