@@ -23,10 +23,11 @@ def main():
         logger.emit('follow', {'from': 'user2', 'to': 'user1'})
     elif args.prefix == "redis_app":
         logger = sender.FluentSender('redis_app', host='localhost', port=24224)
-        logger.emit('follow', {'from': 'userC', 'to': 'userD'})
+        # logger.emit('follow', {'from': 'userC', 'to': 'userD'})
+        logger.emit('pii', {'user': {'name': 'James', 'age': '16'}})
     elif args.prefix == "get_redis":
         r = redis.Redis(host="localhost", port=6379)
-        print([json.loads(item) for item in r.zrange("fluent", 0, -1)] )
+        print([json.loads(item) for item in r.zrange("James", 0, -1)])
     print("done.")
     
 
