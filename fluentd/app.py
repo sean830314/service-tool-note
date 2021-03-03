@@ -26,7 +26,7 @@ def main():
         # logger.emit('follow', {'from': 'userC', 'to': 'userD'})
         logger.emit('pii', {'user': {'name': 'James', 'age': '16'}})
     elif args.prefix == "get_redis":
-        r = redis.Redis(host="localhost", port=6379)
+        r = redis.Redis(host="localhost", port=6379, db=1)
         print([json.loads(item) for item in r.zrange("James", 0, -1)])
     print("done.")
     
