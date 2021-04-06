@@ -174,3 +174,4 @@ rabbitmqadmin get queue=document_analysis requeue=true count=10
 * [RabbitMQ學習筆記之(二) 消費端的確認與拒絕
 ](http://ma-graph.org/sparql-endpoint/)
 * [RabbitMQ系列之三 RabbitMQ几种典型模式](https://blog.csdn.net/caiqing116/article/details/84032099?utm_medium=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-1.control&depth_1-utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-1.control)
+* [Deduplication](https://github.com/noxdafox/rabbitmq-message-deduplication/issues/21)
