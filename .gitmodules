@@ -1,0 +1,3 @@
+[submodule "fluentd/projects/model-data-collector"]
+	path = fluentd/projects/model-data-collector
+	url = https://github.com/sean830314/model-data-collector.git
