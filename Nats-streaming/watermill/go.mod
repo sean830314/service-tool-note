@@ -1,4 +1,4 @@
-module github.com/sean830314/service-tool-note/Nats-streaming
+module github.com/sean830314/service-tool-note/Nats-streaming/watermill
 
 go 1.16
 

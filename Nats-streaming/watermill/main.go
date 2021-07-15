@@ -14,7 +14,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/message/router/plugin"
-	"github.com/sean830314/service-tool-note/Nats-streaming/internal"
+	"github.com/sean830314/service-tool-note/Nats-streaming/watermill/internal"
 )
 
 var (
